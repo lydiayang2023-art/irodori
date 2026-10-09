@@ -543,17 +543,28 @@ function viewLesson(n) {
   const act = (id, ic, name, sub, done, ac) => `<button class="act ${done ? "done" : ""}" data-go="${id}" ${ac ? `style="--ac:${ac}"` : ""}><span class="row" style="width:100%"><span class="ic">${ic}</span>${done ? '<span class="tick">✓ done</span>' : ""}</span><b>${name}</b><span>${sub}</span></button>`;
   const kanjiSub = l.kanji.length ? `${l.kanji.length} kanji words` : n === 1 ? "Hiragana practice" : "Katakana practice";
   const gm = S.sc["gm" + n];
+  const best = k => S.sc[k] != null ? `best ${S.sc[k]}%` : "not tried yet";
+  const need = Math.max(0, Math.ceil(p.total * 0.8) - p.seen);
+  const multi = (arr, pre) => { const tried = arr.filter((_, i) => S.sc[`${pre}${n}-${i}`] != null).length; const avg = Math.round(arr.reduce((a, _, i) => a + (S.sc[`${pre}${n}-${i}`] || 0), 0) / arr.length); return `${tried}/${arr.length} done · average ${avg}%`; };
+  const todo = [];
+  if (!p.vocab) todo.push(`Vocabulary: study ${need} more ${need === 1 ? "word" : "words"} (80% of the list)`);
+  if (!p.grammar) todo.push(`Grammar drills: score 70% or more (${best("g" + n)})`);
+  if (!p.kanji) todo.push(`${l.kanji.length ? "Kanji" : "Kana"} quiz: score 70% or more (${best("k" + n)})`);
+  if (!p.listen) todo.push(`Listening: average 70% across all ${l.listen.length} dialogues (${multi(l.listen, "l")})`);
+  if (!p.speak) todo.push(`Speaking: score 70% in any speaking mode (${best("sp" + n)})`);
+  if (!p.read) todo.push(`Reading: average 70% across all ${l.read.length} ${l.read.length > 1 ? "passages" : "passage"} (${multi(l.read, "r")})`);
   app.innerHTML = topbar(`Lesson ${n}`) + `<div style="--tc:${TOPIC_COLOR(n)}" class="stack">
     <div class="lhead"><div class="art">${ART[Math.ceil(n / 2)]}</div><div class="k">第${n}課 · ${esc(l.topicEn)}</div><h2 class="x">${esc(l.title)}</h2><div class="muted">${esc(l.titleEn)}</div>
     <ul class="cando">${l.cando.map(c => `<li>${esc(c)}</li>`).join("")}</ul></div>
+    ${todo.length && p.count ? `<div class="card stack" style="gap:6px"><b>${p.count}/6 done · to finish this lesson:</b><ul style="margin:0;padding-left:18px;font-size:14px;color:var(--ink2)">${todo.map(t => `<li>${esc(t)}</li>`).join("")}</ul></div>` : !todo.length ? `<div class="feedback ok pop">${mascot("happy", 40)}<span><b>Lesson complete! 6/6</b> Keep reviewing your words when they're due.</span></div>` : ""}
     <button class="act feature" data-go="speak" style="--ac:var(--t8)"><span class="ic" style="width:44px;height:44px">${IC.mic}</span><span class="tx"><b>Speaking practice ${p.speak ? '<span class="tick" style="margin:0">✓ done</span>' : ""}</b><span>Say it, listen &amp; repeat, role-play, and chat with Claude</span></span></button>
     <div class="acts">
-      ${act("vocab", IC.cards, "Vocabulary", `${p.seen}/${p.total} studied${due ? ` · ${due} due` : ""}`, p.vocab, "var(--t5)")}
+      ${act("vocab", IC.cards, "Vocabulary", `${p.seen}/${p.total} studied${!p.vocab ? ` · ${need} more to finish` : ""}${due ? ` · ${due} due` : ""}`, p.vocab, "var(--t5)")}
       ${act("games", IC.game, "Picture games", gm != null ? `Best ${gm}%` : "Tap the picture · memory match", false, "var(--t2)")}
       ${act("grammar", IC.book, "Grammar", `${l.grammar.length} points · ${l.fill.length + l.order.length} drills`, p.grammar, "var(--t6)")}
       ${act("kanji", IC.brush, l.kanji.length ? "Kanji" : "Kana", kanjiSub, p.kanji, "var(--t3)")}
-      ${act("listen", IC.ear, "Listening", `${l.listen.length} dialogues`, p.listen, "var(--t7)")}
-      ${act("read", IC.read, "Reading", `${l.read.length} ${l.read.length > 1 ? "passages" : "passage"}`, p.read, "var(--t4)")}
+      ${act("listen", IC.ear, "Listening", multi(l.listen, "l"), p.listen, "var(--t7)")}
+      ${act("read", IC.read, "Reading", multi(l.read, "r"), p.read, "var(--t4)")}
     </div>
     <button class="btn primary block" data-go="quick">${IC.play} Quick study · ${nw ? Math.min(nw, S.set.newPer) + " new words + due" : "practise this lesson's words"}</button></div>`;
   app.querySelectorAll("[data-go]").forEach(b => b.onclick = () => {
